@@ -1,0 +1,13 @@
+{
+  "name": "rello",
+  "version": "1.0.0",
+  "description": "Rello desktop organizer for Roblox development",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "start:web": "python -m http.server 4173"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

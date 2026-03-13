@@ -1,0 +1,72 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #212633;
+  --border: #2f3849;
+  --text: #e8ebf1;
+  --muted: #92a1b9;
+  --accent: #5c8dff;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+.app-shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+.sidebar { border-right: 1px solid var(--border); background: var(--surface); padding: 1rem; }
+.subtitle,.muted { color: var(--muted); }
+.project-header { display: flex; justify-content: space-between; align-items: center; }
+.project-list { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .4rem; }
+.project-list li { background: var(--surface-2); border: 1px solid var(--border); padding: .6rem; border-radius: .5rem; cursor: pointer; }
+.project-list li.active { outline: 2px solid var(--accent); }
+.main-content { padding: 1rem; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.toolbar-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+button {
+  background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: .5rem; padding: .45rem .7rem; cursor: pointer;
+}
+button.active, .primary { background: var(--accent); border-color: var(--accent); }
+.primary-soft { border-color: var(--accent); color: #cfe0ff; }
+.ghost-btn { padding: .2rem .5rem; }
+.board-view { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: .8rem; margin-top: 1rem; align-items: start; }
+.column { background: var(--surface); border: 1px solid var(--border); border-radius: .8rem; min-height: 300px; padding: .8rem; }
+.column-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .5rem; }
+.column h3 { margin: 0; font-size: 1rem; }
+.column-tools { display: flex; gap: .3rem; }
+.icon-btn { padding: .2rem .45rem; font-size: .8rem; }
+.dropzone { display: grid; gap: .6rem; min-height: 250px; }
+.task-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: .7rem; padding: .7rem; cursor: grab; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.card-meta { color: var(--muted); font-size: .85rem; margin: .5rem 0 .2rem; }
+.badge { padding: .1rem .45rem; border-radius: 999px; font-size: .75rem; text-transform: capitalize; }
+.badge.low { background: #355f9f; }
+.badge.medium { background: #5b6e35; }
+.badge.high { background: #915e2f; }
+.badge.critical { background: #912f45; }
+.card-preview img { max-width: 100%; border-radius: .4rem; margin-top: .4rem; }
+pre.luau { background: #0b0d12; padding: .5rem; border-radius: .4rem; overflow-x: auto; }
+.kw { color: #7bb2ff; }
+.type-pill { font-size: .7rem; border: 1px solid var(--border); border-radius: 999px; padding: .1rem .4rem; }
+.type-pill.bug { border-color: #d26a7d; color: #ff9aad; }
+.list-view table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.list-view th, .list-view td { border-bottom: 1px solid var(--border); padding: .5rem; text-align: left; }
+.hidden { display: none !important; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; }
+.modal-content { width: min(760px, 90vw); background: var(--surface); border: 1px solid var(--border); border-radius: .8rem; padding: 1rem; display: grid; gap: .6rem; }
+.modal-content label { display: grid; gap: .3rem; }
+input, select, textarea { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: .4rem; padding: .45rem; font: inherit; }
+.editor-tools { display: flex; gap: .35rem; flex-wrap: wrap; }
+.editor { min-height: 160px; border: 1px solid var(--border); border-radius: .5rem; padding: .6rem; background: var(--surface-2); }
+.modal-actions { display: flex; justify-content: flex-end; gap: .6rem; }
+.context-menu { position: fixed; z-index: 40; list-style: none; padding: .2rem; margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: .4rem; }
+.context-menu li { padding: .35rem .6rem; cursor: pointer; }
+.context-menu li:hover { background: var(--surface-2); }
+.quick-stats { margin-top: 1rem; }
+
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; }
+}

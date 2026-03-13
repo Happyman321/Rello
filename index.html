@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rello - Roblox Project Organizer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <h1>Rello</h1>
+      <p class="subtitle">Roblox project organizer</p>
+      <div class="project-header">
+        <h2>Projects</h2>
+        <button id="add-project-btn" class="ghost-btn">+ New</button>
+      </div>
+      <ul id="project-list" class="project-list"></ul>
+      <section class="quick-stats">
+        <h3>Progress</h3>
+        <div id="project-progress"></div>
+      </section>
+    </aside>
+
+    <main class="main-content">
+      <header class="toolbar">
+        <div>
+          <h2 id="active-project-name"></h2>
+          <p id="active-project-summary" class="muted"></p>
+        </div>
+        <div class="toolbar-actions">
+          <button id="board-view-btn" class="active">Card View</button>
+          <button id="list-view-btn">List View</button>
+          <button id="add-list-btn">+ Card List</button>
+        </div>
+      </header>
+
+      <section id="board-view" class="board-view"></section>
+      <section id="list-view" class="list-view hidden"></section>
+    </main>
+  </div>
+
+  <div id="task-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <header>
+        <h3 id="modal-title">Create Task</h3>
+      </header>
+      <label>Title <input id="task-title" type="text" /></label>
+      <label>Issue Type
+        <select id="task-type">
+          <option value="feature">Feature</option>
+          <option value="bug">Bug</option>
+          <option value="chore">Chore</option>
+        </select>
+      </label>
+      <label>Card List
+        <select id="task-list"></select>
+      </label>
+      <label>Priority
+        <select id="task-priority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </label>
+      <label>Completion % <input id="task-completion" type="range" min="0" max="100" value="0" /><span id="completion-value">0%</span></label>
+
+      <div id="bug-fields" class="bug-fields hidden">
+        <label>Bug Severity
+          <select id="bug-severity">
+            <option value="minor">Minor</option>
+            <option value="major">Major</option>
+            <option value="critical">Critical</option>
+            <option value="blocker">Blocker</option>
+          </select>
+        </label>
+        <label>Repro Steps
+          <textarea id="bug-repro" rows="3" placeholder="How to reproduce this bug..."></textarea>
+        </label>
+      </div>
+
+      <div class="editor-tools">
+        <button type="button" data-command="bold"><b>B</b></button>
+        <button type="button" data-command="italic"><i>I</i></button>
+        <button type="button" data-command="insertUnorderedList">• List</button>
+        <button type="button" id="insert-image">Image</button>
+        <button type="button" id="insert-code">Luau Code</button>
+      </div>
+      <div id="task-description" class="editor" contenteditable="true"></div>
+
+      <footer class="modal-actions">
+        <button id="cancel-task">Cancel</button>
+        <button id="save-task" class="primary">Save Task</button>
+      </footer>
+    </div>
+  </div>
+
+  <ul id="context-menu" class="context-menu hidden">
+    <li data-action="edit">Edit</li>
+    <li data-action="duplicate">Duplicate</li>
+    <li data-action="delete">Delete</li>
+  </ul>
+
+  <template id="card-template">
+    <article class="task-card" draggable="true">
+      <div class="card-head">
+        <h4></h4>
+        <span class="badge"></span>
+      </div>
+      <p class="card-meta"></p>
+      <p class="card-progress"></p>
+      <div class="card-preview"></div>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
