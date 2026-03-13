@@ -30,6 +30,7 @@ button {
   border-radius: .5rem; padding: .45rem .7rem; cursor: pointer;
 }
 button.active, .primary { background: var(--accent); border-color: var(--accent); }
+.primary-soft { border-color: var(--accent); color: #cfe0ff; }
 .ghost-btn { padding: .2rem .5rem; }
 .board-view { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: .8rem; margin-top: 1rem; align-items: start; }
 .column { background: var(--surface); border: 1px solid var(--border); border-radius: .8rem; min-height: 300px; padding: .8rem; }

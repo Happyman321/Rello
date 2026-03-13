@@ -9,6 +9,7 @@ const state = loadState();
 let activeProjectId = state.projects[0]?.id;
 let editTaskId = null;
 let contextTaskId = null;
+let newTaskDefaultListId = "todo";
 
 const projectListEl = document.getElementById("project-list");
 const projectNameEl = document.getElementById("active-project-name");
@@ -32,7 +33,6 @@ function init() {
 
 function bindEvents() {
   document.getElementById("add-project-btn").addEventListener("click", createProject);
-  document.getElementById("new-task-btn").addEventListener("click", () => openTaskModal());
   document.getElementById("add-list-btn").addEventListener("click", createCardList);
   document.getElementById("board-view-btn").addEventListener("click", () => setView("board"));
   document.getElementById("list-view-btn").addEventListener("click", () => setView("list"));
@@ -74,9 +74,7 @@ function loadState() {
 }
 
 function normalizeProject(project) {
-  if (!project.lists?.length) {
-    project.lists = [...DEFAULT_LISTS];
-  }
+  if (!project.lists?.length) project.lists = [...DEFAULT_LISTS];
 
   project.lists = project.lists.map((list) => ({
     locked: DEFAULT_LISTS.some((d) => d.id === list.id) || Boolean(list.locked),
@@ -103,9 +101,8 @@ function activeProject() {
 function createProject() {
   const name = prompt("Project name");
   if (!name) return;
-  const project = { id: crypto.randomUUID(), name, lists: [...DEFAULT_LISTS], tasks: [] };
-  state.projects.push(project);
-  activeProjectId = project.id;
+  state.projects.push({ id: crypto.randomUUID(), name, lists: [...DEFAULT_LISTS], tasks: [] });
+  activeProjectId = state.projects[state.projects.length - 1].id;
   saveState();
   renderAll();
 }
@@ -160,6 +157,13 @@ function renderBoard() {
 
     const tools = document.createElement("div");
     tools.className = "column-tools";
+
+    const addCardBtn = document.createElement("button");
+    addCardBtn.className = "icon-btn primary-soft";
+    addCardBtn.textContent = "+ Card";
+    addCardBtn.onclick = () => openTaskModal(null, list.id);
+    tools.appendChild(addCardBtn);
+
     if (!list.locked) {
       const renameBtn = document.createElement("button");
       renameBtn.className = "icon-btn";
@@ -267,8 +271,7 @@ function renderList() {
 
 function renderStats() {
   const project = activeProject();
-  const doneList = project.lists.find((list) => list.id === "done");
-  const done = doneList ? project.tasks.filter((t) => t.listId === doneList.id).length : 0;
+  const done = project.tasks.filter((t) => t.listId === "done").length;
   const total = project.tasks.length || 1;
   const percent = Math.round((done / total) * 100);
   const bugs = project.tasks.filter((t) => t.type === "bug").length;
@@ -303,14 +306,16 @@ function syncBugFieldsVisibility() {
   bugFieldsEl.classList.toggle("hidden", taskTypeEl.value !== "bug");
 }
 
-function openTaskModal(taskId = null) {
+function openTaskModal(taskId = null, defaultListId = null) {
   editTaskId = taskId;
   const task = activeProject().tasks.find((t) => t.id === taskId);
+
+  newTaskDefaultListId = defaultListId || newTaskDefaultListId || "todo";
 
   document.getElementById("modal-title").textContent = task ? "Edit Card" : "Create Card";
   document.getElementById("task-title").value = task?.title || "";
   taskTypeEl.value = task?.type || "feature";
-  fillListPicker(task?.listId || "todo");
+  fillListPicker(task?.listId || newTaskDefaultListId || "todo");
   document.getElementById("task-priority").value = task?.priority || "medium";
   completionInput.value = task?.completion ?? 0;
   completionValue.textContent = `${completionInput.value}%`;
