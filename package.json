@@ -5,9 +5,28 @@
   "main": "electron-main.js",
   "scripts": {
     "start": "electron .",
-    "start:web": "python -m http.server 4173"
+    "start:web": "python -m http.server 4173",
+    "build:win": "electron-builder --win portable"
   },
   "devDependencies": {
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.happyman321.rello",
+    "productName": "Rello",
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "electron-main.js",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable"
+    }
   }
 }
