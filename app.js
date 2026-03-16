@@ -1,4 +1,4 @@
-const STORAGE_KEY = "rello_state_v2";
+const STORAGE_KEY = "rello_state_v3";
 const DEFAULT_LISTS = [
   { id: "todo", name: "To Do", locked: true },
   { id: "progress", name: "In Progress", locked: true },
@@ -10,6 +10,7 @@ let activeProjectId = state.projects[0]?.id;
 let editTaskId = null;
 let contextTaskId = null;
 let newTaskDefaultListId = "todo";
+let activeTextPromptAction = null;
 
 const projectListEl = document.getElementById("project-list");
 const projectNameEl = document.getElementById("active-project-name");
@@ -19,10 +20,10 @@ const listViewEl = document.getElementById("list-view");
 const progressEl = document.getElementById("project-progress");
 const taskModal = document.getElementById("task-modal");
 const contextMenu = document.getElementById("context-menu");
-const completionInput = document.getElementById("task-completion");
-const completionValue = document.getElementById("completion-value");
 const taskTypeEl = document.getElementById("task-type");
 const bugFieldsEl = document.getElementById("bug-fields");
+const checklistEditorEl = document.getElementById("checklist-editor");
+const textPromptModal = document.getElementById("text-prompt-modal");
 
 init();
 
@@ -32,40 +33,65 @@ function init() {
 }
 
 function bindEvents() {
-  document.getElementById("add-project-btn").addEventListener("click", createProject);
-  document.getElementById("add-list-btn").addEventListener("click", createCardList);
+  document.getElementById("add-project-btn").addEventListener("click", () => openTextPrompt("Create Project", "Project name", (name) => {
+    state.projects.push({ id: crypto.randomUUID(), name, lists: structuredClone(DEFAULT_LISTS), tasks: [] });
+    activeProjectId = state.projects[state.projects.length - 1].id;
+    saveState();
+    renderAll();
+  }));
+
+  document.getElementById("add-list-btn").addEventListener("click", () => openTextPrompt("Create List", "New card list name", (name) => {
+    activeProject().lists.push({ id: crypto.randomUUID(), name, locked: false });
+    saveState();
+    renderAll();
+  }));
+
   document.getElementById("board-view-btn").addEventListener("click", () => setView("board"));
   document.getElementById("list-view-btn").addEventListener("click", () => setView("list"));
   document.getElementById("cancel-task").addEventListener("click", closeTaskModal);
   document.getElementById("save-task").addEventListener("click", saveTaskFromModal);
-  completionInput.addEventListener("input", () => {
-    completionValue.textContent = `${completionInput.value}%`;
-  });
   taskTypeEl.addEventListener("change", syncBugFieldsVisibility);
 
+  document.getElementById("add-checklist-item").addEventListener("click", () => addChecklistEditorItem("", false));
+
+  const editor = document.getElementById("task-description");
   document.querySelectorAll(".editor-tools [data-command]").forEach((btn) => {
-    btn.addEventListener("click", () => document.execCommand(btn.dataset.command, false, null));
+    btn.addEventListener("click", () => {
+      editor.focus();
+      document.execCommand(btn.dataset.command, false, null);
+    });
   });
+
   document.getElementById("insert-image").addEventListener("click", () => {
-    const url = prompt("Image URL");
-    if (url) document.execCommand("insertImage", false, url);
+    openTextPrompt("Insert Image", "Image URL", (url) => {
+      editor.focus();
+      document.execCommand("insertImage", false, url);
+    });
   });
+
   document.getElementById("insert-code").addEventListener("click", () => {
-    const code = prompt("Paste Luau code");
-    if (!code) return;
-    const pre = `<pre class=\"luau\"><code>${escapeHtml(code)}</code></pre>`;
-    document.execCommand("insertHTML", false, pre);
+    openTextPrompt("Insert Luau", "Paste Luau code", (code) => {
+      const pre = `<pre class=\"luau\"><code>${escapeHtml(code)}</code></pre>`;
+      editor.focus();
+      document.execCommand("insertHTML", false, pre);
+    });
   });
 
   document.addEventListener("click", () => contextMenu.classList.add("hidden"));
   contextMenu.addEventListener("click", onContextAction);
+
+  document.getElementById("text-prompt-cancel").addEventListener("click", closeTextPrompt);
+  document.getElementById("text-prompt-confirm").addEventListener("click", submitTextPrompt);
+  document.getElementById("text-prompt-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitTextPrompt();
+  });
 }
 
 function loadState() {
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
     return {
-      projects: [{ id: crypto.randomUUID(), name: "Core Roblox Game", lists: [...DEFAULT_LISTS], tasks: [] }],
+      projects: [{ id: crypto.randomUUID(), name: "Core Roblox Game", lists: structuredClone(DEFAULT_LISTS), tasks: [] }],
     };
   }
   const parsed = JSON.parse(raw);
@@ -74,20 +100,29 @@ function loadState() {
 }
 
 function normalizeProject(project) {
-  if (!project.lists?.length) project.lists = [...DEFAULT_LISTS];
+  if (!project.lists?.length) project.lists = structuredClone(DEFAULT_LISTS);
 
   project.lists = project.lists.map((list) => ({
     locked: DEFAULT_LISTS.some((d) => d.id === list.id) || Boolean(list.locked),
     ...list,
   }));
 
-  project.tasks = (project.tasks || []).map((task) => ({
-    ...task,
-    type: task.type || "feature",
-    listId: task.listId || task.status || "todo",
-    bugSeverity: task.bugSeverity || "major",
-    bugReproSteps: task.bugReproSteps || "",
-  }));
+  project.tasks = (project.tasks || []).map((task) => {
+    const checklist = (task.checklist || []).map((item) => ({
+      id: item.id || crypto.randomUUID(),
+      text: item.text || "",
+      done: Boolean(item.done),
+    }));
+
+    return {
+      ...task,
+      type: task.type || "feature",
+      listId: task.listId || task.status || "todo",
+      bugSeverity: task.bugSeverity || "major",
+      bugReproSteps: task.bugReproSteps || "",
+      checklist,
+    };
+  });
 }
 
 function saveState() {
@@ -95,24 +130,7 @@ function saveState() {
 }
 
 function activeProject() {
-  return state.projects.find((p) => p.id === activeProjectId);
-}
-
-function createProject() {
-  const name = prompt("Project name");
-  if (!name) return;
-  state.projects.push({ id: crypto.randomUUID(), name, lists: [...DEFAULT_LISTS], tasks: [] });
-  activeProjectId = state.projects[state.projects.length - 1].id;
-  saveState();
-  renderAll();
-}
-
-function createCardList() {
-  const name = prompt("New card list name");
-  if (!name) return;
-  activeProject().lists.push({ id: crypto.randomUUID(), name, locked: false });
-  saveState();
-  renderAll();
+  return state.projects.find((p) => p.id === activeProjectId) || state.projects[0];
 }
 
 function renderAll() {
@@ -177,6 +195,7 @@ function renderBoard() {
       deleteBtn.onclick = () => deleteList(list.id);
       tools.appendChild(deleteBtn);
     }
+
     head.appendChild(tools);
 
     const dropzone = document.createElement("div");
@@ -206,11 +225,11 @@ function renderBoard() {
 function renameList(listId) {
   const list = activeProject().lists.find((l) => l.id === listId);
   if (!list || list.locked) return;
-  const name = prompt("Rename list", list.name);
-  if (!name) return;
-  list.name = name;
-  saveState();
-  renderAll();
+  openTextPrompt("Rename List", "List name", (name) => {
+    list.name = name;
+    saveState();
+    renderAll();
+  }, list.name);
 }
 
 function deleteList(listId) {
@@ -224,6 +243,12 @@ function deleteList(listId) {
   project.lists = project.lists.filter((l) => l.id !== listId);
   saveState();
   renderAll();
+}
+
+function completionFromChecklist(task) {
+  if (!task.checklist?.length) return null;
+  const done = task.checklist.filter((item) => item.done).length;
+  return Math.round((done / task.checklist.length) * 100);
 }
 
 function cardFromTask(task) {
@@ -240,11 +265,38 @@ function cardFromTask(task) {
   const severity = task.type === "bug" ? ` · ${task.bugSeverity}` : "";
   meta.innerHTML = `<span class="type-pill ${task.type}">${task.type}</span>${severity}`;
 
-  card.querySelector(".card-progress").textContent = `Completion: ${task.completion}%`;
-  card.querySelector(".card-preview").innerHTML = highlightLuau(task.description || "");
+  const completion = completionFromChecklist(task);
+  const completionEl = card.querySelector(".card-progress");
+  completionEl.textContent = completion === null ? "No checklist yet" : `Checklist: ${completion}%`;
+
+  card.querySelector(".card-preview").innerHTML = highlightLuau(task.description || "<p class='muted'>No description.</p>");
+
+  const checklistEl = card.querySelector(".card-checklist");
+  if (task.checklist?.length) {
+    checklistEl.innerHTML = "";
+    task.checklist.forEach((item) => {
+      const row = document.createElement("label");
+      row.className = "check-item";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = item.done;
+      checkbox.addEventListener("change", () => {
+        item.done = checkbox.checked;
+        saveState();
+        renderAll();
+      });
+      const text = document.createElement("span");
+      text.textContent = item.text;
+      row.append(checkbox, text);
+      checklistEl.appendChild(row);
+    });
+  } else {
+    checklistEl.innerHTML = "";
+  }
+
+  card.querySelector(".edit-card-btn").onclick = () => openTaskModal(task.id);
 
   card.ondragstart = (e) => e.dataTransfer.setData("text/plain", task.id);
-  card.ondblclick = () => openTaskModal(task.id);
   card.oncontextmenu = (e) => {
     e.preventDefault();
     contextTaskId = task.id;
@@ -258,14 +310,37 @@ function cardFromTask(task) {
 
 function renderList() {
   const project = activeProject();
-  listViewEl.innerHTML = `<table><thead><tr><th>Task</th><th>Type</th><th>List</th><th>Priority</th><th>Completion</th></tr></thead><tbody></tbody></table>`;
-  const tbody = listViewEl.querySelector("tbody");
+  listViewEl.innerHTML = "";
 
-  project.tasks.forEach((task) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td>${task.title}</td><td>${task.type}</td><td>${listName(task.listId)}</td><td>${task.priority}</td><td>${task.completion}%</td>`;
-    row.ondblclick = () => openTaskModal(task.id);
-    tbody.appendChild(row);
+  project.lists.forEach((list) => {
+    const section = document.createElement("section");
+    section.className = "list-section";
+    section.innerHTML = `<h3>${list.name}</h3><table><thead><tr><th>Task</th><th>Type</th><th>Priority</th><th>Checklist</th><th>Actions</th></tr></thead><tbody></tbody></table>`;
+
+    const tbody = section.querySelector("tbody");
+    const tasks = project.tasks.filter((task) => task.listId === list.id);
+
+    if (!tasks.length) {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td colspan="5" class="muted">No cards in this list.</td>`;
+      tbody.appendChild(row);
+    }
+
+    tasks.forEach((task) => {
+      const row = document.createElement("tr");
+      const completion = completionFromChecklist(task);
+      row.innerHTML = `
+        <td>${task.title}</td>
+        <td>${task.type}</td>
+        <td>${task.priority}</td>
+        <td>${completion === null ? "—" : `${completion}%`}</td>
+        <td><button class="icon-btn row-edit-btn">Edit</button></td>
+      `;
+      row.querySelector(".row-edit-btn").onclick = () => openTaskModal(task.id);
+      tbody.appendChild(row);
+    });
+
+    listViewEl.appendChild(section);
   });
 }
 
@@ -276,10 +351,6 @@ function renderStats() {
   const percent = Math.round((done / total) * 100);
   const bugs = project.tasks.filter((t) => t.type === "bug").length;
   progressEl.innerHTML = `<p>${done}/${project.tasks.length} completed · ${bugs} bugs</p><progress max="100" value="${percent}"></progress>`;
-}
-
-function listName(id) {
-  return activeProject().lists.find((l) => l.id === id)?.name || "Unknown";
 }
 
 function setView(view) {
@@ -317,11 +388,11 @@ function openTaskModal(taskId = null, defaultListId = null) {
   taskTypeEl.value = task?.type || "feature";
   fillListPicker(task?.listId || newTaskDefaultListId || "todo");
   document.getElementById("task-priority").value = task?.priority || "medium";
-  completionInput.value = task?.completion ?? 0;
-  completionValue.textContent = `${completionInput.value}%`;
   document.getElementById("bug-severity").value = task?.bugSeverity || "major";
   document.getElementById("bug-repro").value = task?.bugReproSteps || "";
   document.getElementById("task-description").innerHTML = task?.description || "";
+  checklistEditorEl.innerHTML = "";
+  (task?.checklist || []).forEach((item) => addChecklistEditorItem(item.text, item.done));
   syncBugFieldsVisibility();
   taskModal.classList.remove("hidden");
 }
@@ -329,6 +400,28 @@ function openTaskModal(taskId = null, defaultListId = null) {
 function closeTaskModal() {
   taskModal.classList.add("hidden");
   editTaskId = null;
+}
+
+function addChecklistEditorItem(text = "", done = false) {
+  const row = document.createElement("div");
+  row.className = "check-edit-row";
+  row.innerHTML = `
+    <input type="checkbox" class="check-edit-done" ${done ? "checked" : ""} />
+    <input type="text" class="check-edit-text" placeholder="Checklist item" value="${escapeHtml(text)}" />
+    <button type="button" class="icon-btn remove-check-item">Remove</button>
+  `;
+  row.querySelector(".remove-check-item").addEventListener("click", () => row.remove());
+  checklistEditorEl.appendChild(row);
+}
+
+function readChecklistFromEditor() {
+  return Array.from(checklistEditorEl.querySelectorAll(".check-edit-row"))
+    .map((row) => ({
+      id: crypto.randomUUID(),
+      text: row.querySelector(".check-edit-text").value.trim(),
+      done: row.querySelector(".check-edit-done").checked,
+    }))
+    .filter((item) => item.text.length > 0);
 }
 
 function saveTaskFromModal() {
@@ -340,10 +433,10 @@ function saveTaskFromModal() {
     type: taskTypeEl.value,
     listId: document.getElementById("task-list").value,
     priority: document.getElementById("task-priority").value,
-    completion: Number(completionInput.value),
     bugSeverity: document.getElementById("bug-severity").value,
     bugReproSteps: document.getElementById("bug-repro").value.trim(),
     description: document.getElementById("task-description").innerHTML,
+    checklist: readChecklistFromEditor(),
   };
 
   const project = activeProject();
@@ -369,7 +462,12 @@ function onContextAction(e) {
   if (action === "edit") openTaskModal(contextTaskId);
   if (action === "duplicate") {
     const source = project.tasks[index];
-    project.tasks.push({ ...source, id: crypto.randomUUID(), title: `${source.title} (Copy)` });
+    project.tasks.push({
+      ...source,
+      id: crypto.randomUUID(),
+      title: `${source.title} (Copy)`,
+      checklist: (source.checklist || []).map((item) => ({ ...item, id: crypto.randomUUID() })),
+    });
     saveState();
     renderAll();
   }
@@ -381,8 +479,31 @@ function onContextAction(e) {
   contextMenu.classList.add("hidden");
 }
 
+function openTextPrompt(title, label, onSubmit, defaultValue = "") {
+  activeTextPromptAction = onSubmit;
+  document.getElementById("text-prompt-title").textContent = title;
+  document.getElementById("text-prompt-label").textContent = label;
+  const input = document.getElementById("text-prompt-input");
+  input.value = defaultValue;
+  textPromptModal.classList.remove("hidden");
+  input.focus();
+}
+
+function submitTextPrompt() {
+  const input = document.getElementById("text-prompt-input");
+  const value = input.value.trim();
+  if (!value || !activeTextPromptAction) return;
+  activeTextPromptAction(value);
+  closeTextPrompt();
+}
+
+function closeTextPrompt() {
+  activeTextPromptAction = null;
+  textPromptModal.classList.add("hidden");
+}
+
 function escapeHtml(text) {
-  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
 function highlightLuau(html) {
