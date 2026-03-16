@@ -64,7 +64,6 @@
           <option value="critical">Critical</option>
         </select>
       </label>
-      <label>Completion % <input id="task-completion" type="range" min="0" max="100" value="0" /><span id="completion-value">0%</span></label>
 
       <div id="bug-fields" class="bug-fields hidden">
         <label>Bug Severity
@@ -89,9 +88,28 @@
       </div>
       <div id="task-description" class="editor" contenteditable="true"></div>
 
+      <div class="checklist-editor-wrap">
+        <div class="checklist-header">
+          <h4>Checklist</h4>
+          <button type="button" id="add-checklist-item" class="icon-btn">+ Item</button>
+        </div>
+        <div id="checklist-editor" class="checklist-editor"></div>
+      </div>
+
       <footer class="modal-actions">
         <button id="cancel-task">Cancel</button>
         <button id="save-task" class="primary">Save Task</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="text-prompt-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content narrow">
+      <h3 id="text-prompt-title">Prompt</h3>
+      <label><span id="text-prompt-label">Name</span><input id="text-prompt-input" type="text" /></label>
+      <footer class="modal-actions">
+        <button id="text-prompt-cancel">Cancel</button>
+        <button id="text-prompt-confirm" class="primary">Confirm</button>
       </footer>
     </div>
   </div>
@@ -111,6 +129,8 @@
       <p class="card-meta"></p>
       <p class="card-progress"></p>
       <div class="card-preview"></div>
+      <div class="card-checklist"></div>
+      <button class="edit-card-btn icon-btn" type="button">Edit</button>
     </article>
   </template>
 
